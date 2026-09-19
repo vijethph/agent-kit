@@ -1,0 +1,69 @@
+name: reusable — package chart
+
+on:
+  workflow_call:
+    inputs:
+      chart_version: { required: true,  type: string }
+      app_version:   { required: true,  type: string }
+      push:          { required: false, type: boolean, default: false }
+      chart_dir:     { required: false, type: string,  default: "helm/testapp" }
+      oci_repo:      { required: false, type: string,  default: "" }
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v5
+        with:
+          version: v3.19.0
+
+      - name: Stamp versions
+        run: |
+          set -euo pipefail
+          sed -i -E "s|^version:.*|version: ${{ inputs.chart_version }}|"           "${{ inputs.chart_dir }}/Chart.yaml"
+          sed -i -E "s|^appVersion:.*|appVersion: \"${{ inputs.app_version }}\"|"   "${{ inputs.chart_dir }}/Chart.yaml"
+          cat "${{ inputs.chart_dir }}/Chart.yaml"
+
+      - name: Lint and template
+        run: |
+          helm lint "${{ inputs.chart_dir }}" --strict
+          helm template release-check "${{ inputs.chart_dir }}" > /tmp/rendered.yaml
+          wc -l /tmp/rendered.yaml
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          helm package "${{ inputs.chart_dir }}" --destination dist
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chart-${{ inputs.chart_version }}
+          path: dist/*.tgz
+          retention-days: 14
+
+      - name: Push to OCI registry
+        if: inputs.push
+        env:
+          OCI_REPO: ${{ inputs.oci_repo != '' && inputs.oci_repo || format('oci://ghcr.io/{0}/charts', github.repository_owner) }}
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+          for pkg in dist/*.tgz; do
+            helm push "$pkg" "$OCI_REPO"
+          done
+
+      - name: Summary
+        run: |
+          {
+            echo "### Chart"
+            echo "- chart version: \`${{ inputs.chart_version }}\`"
+            echo "- appVersion: \`${{ inputs.app_version }}\`"
+            echo "- pushed: \`${{ inputs.push }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
