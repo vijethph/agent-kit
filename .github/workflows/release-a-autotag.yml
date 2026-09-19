@@ -1,0 +1,107 @@
+name: "Release A — auto tag on main"
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Compute the version but do not tag or push artefacts"
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false      # never cancel a release mid-flight
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.calc.outputs.version }}
+      tag:     ${{ steps.calc.outputs.tag }}
+      bump:    ${{ steps.calc.outputs.bump }}
+      dry_run: ${{ steps.flags.outputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0          # required: full history + tags
+          fetch-tags: true
+
+      - id: flags
+        run: echo "dry_run=${{ inputs.dry_run == true }}" >> "$GITHUB_OUTPUT"
+
+      - id: calc
+        run: ./scripts/next-version.sh --mode auto --channel rc
+
+      - name: Summary
+        run: |
+          {
+            echo "### Candidate \`${{ steps.calc.outputs.tag }}\`"
+            echo ""
+            echo "| field | value |"
+            echo "|---|---|"
+            echo "| previous GA | ${{ steps.calc.outputs.last-ga }} |"
+            echo "| bump | ${{ steps.calc.outputs.bump }} |"
+            echo "| breaking detected | ${{ steps.calc.outputs.breaking }} |"
+            echo "| dry run | ${{ steps.flags.outputs.dry_run }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  tag:
+    needs: version
+    if: needs.version.outputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write             # push tags, create releases
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+
+      - name: Create annotated tag
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release candidate $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --prerelease \
+            --generate-notes
+
+  image:
+    needs: [version, tag]
+    if: always() && needs.version.result == 'success'
+    uses: ./.github/workflows/_build-image.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      push:    ${{ needs.version.outputs.dry_run != 'true' }}
+      latest:  false
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+  chart:
+    needs: [version, image]
+    uses: ./.github/workflows/_package-chart.yml
+    with:
+      chart_version: ${{ needs.version.outputs.version }}
+      app_version:   ${{ needs.version.outputs.version }}
+      push:          ${{ needs.version.outputs.dry_run != 'true' }}
+    permissions:
+      contents: read
+      packages: write
