@@ -59,9 +59,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          state=$(gh api "repos/${{ github.repository }}/commits/$(git rev-parse HEAD)/status" --jq '.state')
-          echo "combined status: $state"
-          [[ "$state" == "success" ]] || { echo "::error::CI is not green on ${{ inputs.ref }}"; exit 1; }
+            state=$(gh api \
+              "repos/${{ github.repository }}/commits/$(git rev-parse HEAD)/status" \
+              --jq '.state')
+
+            echo "combined status: $state"
+
+            case "$state" in
+              success|pending)
+                echo "CI status is acceptable: $state"
+                ;;
+              failure)
+                echo "::error::CI has failed on ${{ inputs.ref }}"
+                exit 1
+                ;;
+              *)
+                echo "::error::Unexpected CI status: $state"
+                exit 1
+                ;;
+            esac
 
       - id: resolve
         run: |
