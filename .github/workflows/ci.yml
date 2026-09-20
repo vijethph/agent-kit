@@ -24,6 +24,20 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+      
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          app-id:       ${{ vars.RELEASE_APP_ID }}
+          private-key:  ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner:        ${{ github.repository_owner }}
+          repositories: playground
+
+      - name: Authenticate git for github.com
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"    
 
       - name: Install uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4

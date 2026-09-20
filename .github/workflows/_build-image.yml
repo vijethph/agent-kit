@@ -84,6 +84,8 @@ jobs:
           sbom:       true
           cache-from: type=gha
           cache-to:   type=gha,mode=max
+          secrets: |
+            gh_token=${{ steps.app-token.outputs.token }}
           build-args: |
             APP_VERSION=${{ inputs.version }}
 
