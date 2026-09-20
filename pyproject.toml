@@ -10,5 +10,5 @@ requires = ["uv_build>=0.12.17,<0.13"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
-mylib = { git = "https://github.com/vijethph/playground.git", tag = "v1.1.3" }
-#mylib = { git = "ssh://github.com/vijethph/playground.git", tag = "v1.1.3" }
+#mylib = { git = "https://github.com/vijethph/playground.git", tag = "v1.1.3" }
+mylib = { git = "ssh://github.com/vijethph/playground.git", tag = "v1.1.3" }
