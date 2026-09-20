@@ -25,7 +25,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
       
-      - uses: actions/create-github-app-token@v3
+      - name: Configure GitHub App Token
+        uses: actions/create-github-app-token@v3
         id: app-token
         with:
           app-id:       ${{ vars.RELEASE_APP_ID }}
@@ -33,11 +34,20 @@ jobs:
           owner:        ${{ github.repository_owner }}
           repositories: playground
 
-      - name: Authenticate git for github.com
+#      - name: Authenticate git for github.com
+#        env:
+#          TOKEN: ${{ steps.app-token.outputs.token }}
+#        run: |
+#          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"   
+ 
+      - name: Configure SSH
         env:
-          TOKEN: ${{ steps.app-token.outputs.token }}
+          KEY: ${{ secrets.MYLIB_DEPLOY_KEY }}
         run: |
-          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"    
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
 
       - name: Install uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
@@ -53,3 +63,14 @@ jobs:
 
       - name: Check formatting
         run: uvx ruff format --check .
+
+  test-build:
+    uses: ./.github/workflows/_build-image.yml
+    with:
+      version: "v0.6.0" # just a test for building docker image
+      push:    true
+      latest:  false
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
