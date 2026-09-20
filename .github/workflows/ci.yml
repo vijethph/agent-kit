@@ -70,6 +70,7 @@ jobs:
       version: "v0.6.0" # just a test for building docker image
       push:    true
       latest:  false
+    secrets: inherit
     permissions:
       contents: read
       packages: write
