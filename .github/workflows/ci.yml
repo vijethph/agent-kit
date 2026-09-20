@@ -34,20 +34,20 @@ jobs:
           owner:        ${{ github.repository_owner }}
           repositories: playground
 
-#      - name: Authenticate git for github.com
-#        env:
-#          TOKEN: ${{ steps.app-token.outputs.token }}
-#        run: |
-#          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"   
- 
-      - name: Configure SSH
+      - name: Authenticate git for github.com
         env:
-          KEY: ${{ secrets.MYLIB_DEPLOY_KEY }}
+          TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"   
+ 
+#      - name: Configure SSH
+#        env:
+#          KEY: ${{ secrets.MYLIB_DEPLOY_KEY }}
+#        run: |
+#          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+#          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+#          chmod 600 ~/.ssh/id_ed25519
+#          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
 
       - name: Install uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
