@@ -66,6 +66,13 @@ jobs:
         env:
           UV_INDEX_PYOCI_USERNAME: ${{ github.actor }}
           UV_INDEX_PYOCI_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      
+#      - name: Fetch wheels from the wheelhouse image
+#        run: |
+#          docker create --name wh ghcr.io/vijethph/playground/mylib-wheels:v1.2.3
+#          docker cp wh:/wheels ./wheels
+#          docker rm wh
+#      - run: pip install --find-links=./wheels -r requirements.txt
 
       - name: Check formatting
         run: uvx ruff format --check .

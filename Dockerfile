@@ -1,3 +1,5 @@
+#ARG MYLIB_VERSION=v1.1.3
+#FROM ghcr.io/acme/mylib-wheels:${MYLIB_VERSION} AS wheels
 FROM python:3.14-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends git openssh-client \
@@ -6,6 +8,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends git openssh-cli
  && ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.17 /uv /uvx /bin/
+#COPY --from=wheels /wheels /wheels
+
+#COPY requirements.txt .
+#RUN pip install --no-cache-dir \
+#      --find-links=/wheels \
+#      -r requirements.txt \
+# && rm -rf /wheels
 
 WORKDIR /app
 
