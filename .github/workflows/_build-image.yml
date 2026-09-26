@@ -97,6 +97,8 @@ jobs:
           cache-to:   type=gha,mode=max
 #          secrets: |
 #            gh_token=${{ steps.app-token.outputs.token }}
+          secrets: |
+            pyoci_pw=${{ secrets.GITHUB_TOKEN }}
           ssh: default=${{ env.SSH_AUTH_SOCK }}
           build-args: |
             APP_VERSION=${{ inputs.version }}

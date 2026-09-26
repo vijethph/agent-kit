@@ -13,7 +13,12 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 COPY pyproject.toml uv.lock ./
 
-RUN --mount=type=ssh uv sync --frozen --no-dev --no-install-project
+RUN --mount=type=secret,id=pyoci_pw \
+    UV_INDEX_PYOCI_USERNAME=ci \
+    UV_INDEX_PYOCI_PASSWORD="$(cat /run/secrets/pyoci_pw)" \
+    uv sync --frozen --no-dev --no-install-project
+
+#RUN --mount=type=ssh uv sync --frozen --no-dev --no-install-project
 
 #RUN --mount=type=secret,id=gh_token \
 #    git config --global url."https://x-access-token:$(cat /run/secrets/gh_token)@github.com/".insteadOf "https://github.com/" \
